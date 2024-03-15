@@ -1,6 +1,6 @@
 # Projet-Informatique
 
-Une fois placé dans le répertoire avec l'invite de commande
+Une fois placé dans le répertoire "algorithmes" avec l'invite de commande
 ```
 > julia
 ```
