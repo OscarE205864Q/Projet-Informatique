@@ -21,4 +21,5 @@ Pour lancer l'algorithme A star
 > include("a_star.jl")
 ```
 
-La grille sur laquelle est exécuté un algorithme est modifiable dans son fichier
+
+La grille sur laquelle est exécuté un algorithme est modifiable dans le fichier de ce-dernier
