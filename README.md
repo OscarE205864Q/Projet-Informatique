@@ -1,16 +1,24 @@
 # Projet-Informatique
 
-Une fois placé dans le répertoire avec l'invite de commande :
-```>julia```
+Une fois placé dans le répertoire avec l'invite de commande
+```
+> julia
+```
 
-Pour l'algorithme flood fill
-```>include("flood_fill.jl")```
+Pour lancer l'algorithme flood fill
+```
+> include("flood_fill.jl")
+```
 
-Pour l'algorithme de Dijkstra
+Pour lancer l'algorithme de Dijkstra
 ```
 ] add DataStructures
->include("dijkstra.jl")
+> include("dijkstra.jl")
 ```
 
-Pour l'algorithme A star
-```>include("a_star.jl")```
+Pour lancer l'algorithme A star
+```
+> include("a_star.jl")
+```
+
+La grille sur laquelle est exécuté un algorithme est modifiable dans son fichier
