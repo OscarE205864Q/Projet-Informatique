@@ -18,8 +18,9 @@ Pour lancer l'algorithme de Dijkstra
 
 Pour lancer l'algorithme A star
 ```
+] add DataStructures
 > include("a_star.jl")
 ```
 
 
-La grille sur laquelle est exécuté un algorithme est modifiable dans le fichier de ce-dernier
+La carte sur laquelle est exécuté un algorithme est modifiable dans le fichier config, avec d'autres paramètre comme les points de départ et d'arrivée
