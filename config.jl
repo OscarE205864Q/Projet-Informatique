@@ -1,4 +1,4 @@
-MAP_PATH = "../theglaive.map"  # Chemin relatif au fichier dans le dossier "algorithmes"
+MAP_PATH = "../maps/theglaive.map"  # Chemin relatif au fichier map depuis un ficher dans le dossier "algorithmes"
 START = (189, 193)  # Position de départ
 FINISH = (226, 437)  # Position d'arrivée
 DEFAULT_MOVEMENT_COST = 1  # Coût d'un déplacement normal
