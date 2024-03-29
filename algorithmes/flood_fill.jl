@@ -1,80 +1,78 @@
-# Fonction pour reconstruire le chemin depuis l'arrivée
-function chemin_optimal(chemin_final, distances, depart, arrivee, case_actuelle)
-    if distances[arrivee[1], arrivee[2]] != -1
-        case_actuelle = arrivee
+include("../config.jl")
+include("../defs.jl")
 
-        while case_actuelle != depart
-            pushfirst!(chemin_final, case_actuelle)
+# Fonction pour reconstruire le chemin en partant de la fin
+function get_rebuilt_path(map, distances, start, finish)
+    map_size = size(map)
+    path::Vector{Tuple{Int64, Int64}} = []
 
-            for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)]
-                suivant = (case_actuelle[1] + dx, case_actuelle[2] + dy)
+    if distances[finish[1], finish[2]] != -1
+        node = finish
 
-                if 1 <= suivant[1] <= size(grille, 1) && 1 <= suivant[2] <= size(grille, 2) && distances[suivant[1], suivant[2]] == distances[case_actuelle[1], case_actuelle[2]] - 1
-                    case_actuelle = suivant
+        while node != start
+            pushfirst!(path, node)
+
+            # On itère sur les cases voisines
+            for next in [node .+ (1, 0), node .+ (-1, 0), node .+ (0, 1), node .+ (0, -1)]
+                # On regarde si la case suivante est la précédente de la case actuelle, auquel cas on passe aux itérations suivantes
+                if is_reachable(map_size, next, map[next[1], next[2]]) && distances[next[1], next[2]] == distances[node[1], node[2]] - 1
+                    node = next
                     break
                 end
             end
         end
-        pushfirst!(chemin_final, depart)
+
+        # On ajoute la case initiale au chemin
+        pushfirst!(path, start)
     end
 
-    return chemin_final
+    return path
 end
 
 # Algorithme flood fill
-function flood_fill(grille, depart, arrivee)
-    # Créer une grille pour enregistrer les distances
-    distances = fill(-1, size(grille))
+function flood_fill_algo(map, start, finish)
+    # Tuple de la hauteur et largeur de la carte
+    map_size = size(map)
+    seen_count = 0
 
-    # On initialise la distance du point de départ à 0
-    distances[depart[1], depart[2]] = 0
+    # Création d'une map pour enregistrer les distances
+    distances = fill(-1, map_size)
+    distances[start[1], start[2]] = 0
 
     # File d'attente pour le flood fill
-    file = [(depart, 0)]
+    file = [(start, 0)]
 
-    # Liste du chemin le plus court, potentiellement vide
-    chemin_final = []
-
-    # Initialisation de la case_actuelle pour une utilisation sur tout le scope de la fonction
-    case_actuelle = depart
-
+	# Tant qu'il y a des cases dans la file, on cherche
     while !isempty(file)
-        case_actuelle, distance = popfirst!(file)
+        node, distance = popfirst!(file)
 
         # Si on a atteint l'arrivée, on arrête la boucle
-        if case_actuelle == arrivee
+        if node == finish
             break
         end
 
-        # On parcour les cases voisines
-        for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)]
-            suivant = (case_actuelle[1] + dx, case_actuelle[2] + dy)
-
+        # On itère sur les cases voisines pour progresser
+		for next in [node .+ (1, 0), node .+ (-1, 0), node .+ (0, 1), node .+ (0, -1)]
             # On vérifie si le voisin est valide
-            if 1 <= suivant[1] <= size(grille, 1) && 1 <= suivant[2] <= size(grille, 2) && grille[suivant[1], suivant[2]] == 0 && distances[suivant[1], suivant[2]] == -1
+            if is_reachable(map_size, next, map[next[1], next[2]]) && distances[next[1], next[2]] == -1
                 # On met à jour la distance du voisin
-                distances[suivant[1], suivant[2]] = distance + 1
+                distances[next[1], next[2]] = distance + 1
 
                 # On ajoute le voisin à la file d'attente
-                push!(file, (suivant, distance + 1))
+                push!(file, (next, distance + 1))
+
+                seen_count += 1
             end
         end
     end
 
-    return chemin_optimal(chemin_final, distances, depart, arrivee, case_actuelle)
+    path = get_rebuilt_path(map, distances, start, finish)
+
+    return [length(path), seen_count, path]
 end
 
-# Grille avec obstacles (1)
-grille = [
-    0 0 0 0 0;
-    0 1 1 1 0;
-    0 0 0 1 0;
-    0 1 1 1 0;
-    0 0 0 0 0
-]
+starting_time = time()
+res = flood_fill_algo(get_map_matrix(MAP_PATH), START, FINISH)
+elapsed_time = round(time() - starting_time, digits=4)
 
-depart = (1, 1)
-arrivee = (3, 3)
-
-chemin = flood_fill(grille, depart, arrivee)
-println("Chemin le plus court : ", chemin)
+print_solution(res, elapsed_time)
