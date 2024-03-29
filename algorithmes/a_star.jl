@@ -1,104 +1,80 @@
-# Structure de noeud pour l'algorithme A star
-struct Node
-    x::Int
-    y::Int
-    precedent::Union{Nothing, Node}
-    g::Float64
-    h::Float64
+include("../config.jl")
+include("../defs.jl")
+
+# Importation d'un module pour utiliser un tas binaire
+using DataStructures
+
+# Enregistrement l'algorithme A star
+struct PathData
+	total_distance::Float64
+	position::Tuple{Int64, Int64}
 end
 
-# Fonction de distance de Manhattan pour l'heuristique
-manhattan(node::Node, goal::Node) =
-    abs(node.x - goal.x) + abs(node.y - goal.y)
+# Fonction pour calculer la "distance manhattan"
+manhattan_distance(current, next) = abs(current[1] - next[1]) + abs(current[2] - next[2])
 
-# Fonction retournant la node avec le g minimal dans le set
-function minimum_explorable(explorable::Set{Node})
-    node_minimale = first(explorable)
+# Algorithme A star avec poids
+function a_star_algo(map::Matrix{Char}, start::Tuple{Int64, Int64}, finish::Tuple{Int64, Int64}, w::Float64)
+	# Tuple de la hauteur et largeur de la carte
+    map_size = size(map)
+	seen_count = 0
 
-    for node in explorable
-        if node.g + node.h < node_minimale.g + node_minimale.h
-            current = node
-        end
-    end
+	# Création d'un dictionnaire (position => distance au point de départ, position) pour stocker le
+	true_path_data = Dict(start => PathData(0, (-1, -1)))
 
-    return node_minimale
+	# Création d'un tas binaire de (distance au point de départ, position) ordonné par distance au point de départ
+	heap::MutableBinaryHeap{Tuple{Float64, Tuple{Int64, Int64}}} = MutableBinaryHeap{Tuple{Float64, Tuple{Int64, Int64}}}(Base.By(first))
+	res = push!(heap, (0, start))
+
+	# Création d'un dictionnaire de (position => position, longueur du chemin, indice du tas binaire) pour stocker les cases visitées et recréer le chemin final
+	nodes_dict = Dict(start => NodeData((-1, -1), 0, res))
+
+	# Tant qu'il reste des cases dans le tas, on cherche
+	while !isempty(heap)
+		# Récupération de la distance totale et de la case courantes
+		total_distance, node = pop!(heap)
+
+		# On regarde si on a atteint la case finale
+		if node == finish
+			break
+		end
+
+		# On itère sur les cases voisines pour progresser
+		for next in [node .+ (1, 0), node .+ (-1, 0), node .+ (0, 1), node .+ (0, -1)]
+			# On vérifie que la case voisine est atteignable
+			if is_reachable(map_size, next, map[next[1], next[2]])
+				# Récupération du "coût de mouvement" pour se déplacer à la case voisine
+				movement_cost = get(MOVEMENT_COST, map[next[1], next[2]], DEFAULT_MOVEMENT_COST)
+
+				# On calcule la nouvelle distance totale entre le point de départ et la case voisine
+				new_distance = true_path_data[node].total_distance + movement_cost
+
+				# Si on a pas encore visité la case voisine, on la "recense", ou on met à jour la distance associée si besoin
+				if !haskey(true_path_data, next) || new_distance < true_path_data[next].total_distance
+					true_path_data[next] = PathData(new_distance, node)
+
+					if !haskey(nodes_dict, next)
+						res = push!(heap, (new_distance + w * manhattan_distance(next, finish), next))
+						nodes_dict[next] = NodeData(node, total_distance + movement_cost, res)
+						seen_count += 1
+					else
+						update!(heap, nodes_dict[next].heap_index, (new_distance + w * manhattan_distance(next, finish), next))
+					end
+				end
+			end
+		end
+	end
+
+	# On retourne une liste contenant la taille du chemin, le nombre de cases visitées, et le chemin, s'il existe
+	if !(finish in keys(nodes_dict))
+		return [0, seen_count, []]
+	end
+
+	return [trunc(Int64, true_path_data[finish].total_distance), seen_count, get_rebuilt_path(nodes_dict, finish)]
 end
 
-# Fonction retournant le liste représentant les cases du chemin optimal
-function chemin_optimal(node_actuelle)
-    chemin = []
+starting_time = time()
+res = a_star_algo(get_map_matrix(MAP_PATH), START, FINISH, WEIGHT)
+elapsed_time = round(time() - starting_time, digits=4)
 
-    while node_actuelle.precedent !== nothing
-        pushfirst!(chemin, (node_actuelle.x, node_actuelle.y))
-        node_actuelle = node_actuelle.precedent
-    end
-
-    pushfirst!(chemin, (node_actuelle.x, node_actuelle.y))
-
-    return chemin
-end
-
-# Algorithme A star
-function a_star_algo(grille, depart::Node, arrivee::Node)
-    explorable = Set{Node}()
-    termine = Set{Tuple{Int64, Int64}}()
-
-    start_node = Node(depart.x, depart.y, nothing, 0.0, manhattan(depart, arrivee))
-    push!(explorable, start_node)
-
-    while !isempty(explorable)
-        node_actuelle = minimum_explorable(explorable)
-
-        # On teste si on est arrivé
-        if (node_actuelle.x, node_actuelle.y) == (arrivee.x, arrivee.y)
-            return chemin_optimal(node_actuelle)
-        end
-
-        # On ajoute la node actuelle dans le set des chemins déjà vus
-        delete!(explorable, node_actuelle)
-        push!(termine, (node_actuelle.x, node_actuelle.y))
-
-        suivants = [(node_actuelle.x + 1, node_actuelle.y), (node_actuelle.x - 1, node_actuelle.y),
-                     (node_actuelle.x, node_actuelle.y + 1), (node_actuelle.x, node_actuelle.y - 1)]
-
-        for suivant in suivants
-            # Si la node suivante ne représente pas une étape de chemin valide, on l'écarte
-            if suivant[1] < 1 || suivant[1] > size(grille, 1) || suivant[2] < 1 || suivant[2] > size(grille, 2) || grille[suivant[1], suivant[2]] == 1
-                continue
-            end
-
-            node_suivante = Node(suivant[1], suivant[2], node_actuelle, node_actuelle.g + 1.0, manhattan(node_actuelle, arrivee))
-
-            # Si la node est pas le set des chemins écartés, on l'ignore
-            if (node_suivante.x, node_suivante.y) in termine
-                continue
-            end
-
-            # Si la node n'est pas dans le set des chemins explorables, on l'ajoute
-            if !(node_suivante in explorable)
-                push!(explorable, node_suivante)
-            end
-        end
-    end
-
-    # Si aucun chemin n'a été trouvé, on renvoie une liste vide
-    return []
-end
-
-# Grille avec obstacles (1)
-grille = [
-    0 0 0 0 0;
-    0 1 1 1 0;
-    0 0 0 1 0;
-    0 1 1 1 0;
-    0 0 0 0 0
-]
-
-# Node de départ
-depart = Node(1, 1, nothing, 0.0, 0.0)
-# Node d'arrivée
-arrivee = Node(3, 3, nothing, 0.0, 0.0)
-# Chemin le plus court obtenu par l'agorithme A star
-chemin = a_star_algo(grille, depart, arrivee)
-
-println("Chemin le plus court : ", chemin)
+print_solution(res, elapsed_time)
